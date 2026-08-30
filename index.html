@@ -142,10 +142,10 @@
     </div>
   </header>
 
-  <!-- 遊戲主卡牌網格 (10張卡片佈局：4 + 4 + 2) -->
-  <main class="w-full max-w-sm flex-1 flex flex-col items-center justify-center my-3">
-    <div id="cardGrid" class="grid grid-cols-4 gap-2.5 sm:gap-3.5 w-full aspect-[4/3.6]">
-      <!-- 卡片由 JavaScript 動態生成 (共 10 張) -->
+  <!-- 遊戲主卡牌網格 (16張卡片佈局：4x4 正方形網格) -->
+  <main class="w-full max-w-sm flex-1 flex flex-col items-center justify-center my-2">
+    <div id="cardGrid" class="grid grid-cols-4 gap-2 sm:gap-3 w-full aspect-square">
+      <!-- 卡片由 JavaScript 動態生成 (共 16 張) -->
     </div>
   </main>
 
@@ -209,7 +209,7 @@
 
   <script>
     /* ==========================================================================
-       1. 卡牌圖片資料設定 (使用指定的 01.jpeg 至 05.jpeg 圖源)
+       1. 卡牌圖片資料設定 (5 款基礎圖案)
        ========================================================================== */
     const CARD_DATA = [
       {
@@ -408,18 +408,19 @@
       winModal.classList.add('hidden');
       winModal.classList.remove('opacity-100');
 
-      // 準備 10 張卡片（5 組配對）
-      const deck = [...CARD_DATA, ...CARD_DATA].map((item, index) => ({
-        uniqueId: index,
-        cardId: item.id,
-        cardData: item
-      }));
+      // 準備 16 張卡片：5 款基礎圖案 (5組) + 前3款重複 1 組 (3組) = 8 組配對 (共 16 張)
+      const pairTypes = [...CARD_DATA, ...CARD_DATA.slice(0, 3)];
+      const deck = [];
+      pairTypes.forEach((item, index) => {
+        deck.push({ uniqueId: `${item.id}_a_${index}`, cardId: item.id, cardData: item });
+        deck.push({ uniqueId: `${item.id}_b_${index}`, cardId: item.id, cardData: item });
+      });
 
       cards = shuffle(deck);
       renderBoard();
     }
 
-    // 繪製棋盤 (10 張卡片)
+    // 繪製 4x4 棋盤 (16 張卡片)
     function renderBoard() {
       cardGrid.innerHTML = '';
 
@@ -428,16 +429,13 @@
         cardEl.className = 'card-container aspect-square cursor-pointer';
         cardEl.dataset.index = index;
 
-        // 特殊排版：前 8 張佔 2 行 (每行 4 張)，最後 2 張排在第 3 行
-        if (index === 8) {
-          cardEl.classList.add('col-start-1', 'sm:col-start-1');
-        }
+        const fallbackAttr = card.cardData.fallback ? `onerror="this.onerror=null;this.src='${card.cardData.fallback}'"` : '';
 
         cardEl.innerHTML = `
           <div class="card-inner">
             <!-- 背面 (藍色 + ?) -->
             <div class="card-back">
-              <span class="text-3xl sm:text-4xl font-black text-white drop-shadow-sm select-none">?</span>
+              <span class="text-2xl sm:text-3xl font-black text-white drop-shadow-sm select-none">?</span>
             </div>
             <!-- 正面 (相片裁剪多餘留白) -->
             <div class="card-front">
@@ -446,6 +444,7 @@
                 alt=""
                 class="card-img-cropped"
                 loading="lazy"
+                ${fallbackAttr}
               />
             </div>
           </div>
@@ -495,8 +494,8 @@
           matchedCount++;
           flippedCards = [];
 
-          // 判斷是否全部配對完成 (5 對 = 10 張)
-          if (matchedCount === CARD_DATA.length) {
+          // 判斷是否全部配對完成 (8 對 = 16 張)
+          if (matchedCount === 8) {
             handleGameWin();
           }
         }, 300);
