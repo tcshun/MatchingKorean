@@ -12,6 +12,12 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@600;800;900&family=Noto+Sans+TC:wght@600;800;900&display=swap" rel="stylesheet">
   
   <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif;
       touch-action: manipulation;
@@ -22,9 +28,10 @@
       background-size: 18px 18px;
     }
 
-    /* 3D 卡牌翻轉效果 */
+    /* 3D 卡牌容器與翻轉效果 (完美兼容手機與網頁) */
     .card-container {
-      perspective: 1000px;
+      perspective: 800px;
+      -webkit-perspective: 800px;
     }
     
     .card-inner {
@@ -33,12 +40,14 @@
       height: 100%;
       transition: transform 0.38s cubic-bezier(0.4, 0.0, 0.2, 1);
       transform-style: preserve-3d;
-      border-radius: 1.1rem;
+      -webkit-transform-style: preserve-3d;
+      border-radius: 1rem;
     }
     
     .card-container.is-flipped .card-inner,
     .card-container.is-matched .card-inner {
       transform: rotateY(180deg);
+      -webkit-transform: rotateY(180deg);
     }
 
     .card-front, .card-back {
@@ -48,30 +57,32 @@
       height: 100%;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
-      border-radius: 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px -2px rgba(59, 130, 246, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border-radius: 1rem;
       overflow: hidden;
+      box-shadow: 0 4px 8px -2px rgba(59, 130, 246, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     
     /* 卡牌背面 (藍底白字 ?) */
     .card-back {
       background: linear-gradient(145deg, #5b79ea, #4766db);
-      color: white;
+      color: #ffffff;
       cursor: pointer;
-      z-index: 2;
-      transform: rotateY(0deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: rotateY(0deg) translateZ(1px);
+      -webkit-transform: rotateY(0deg) translateZ(1px);
     }
     
-    /* 卡牌正面 */
+    /* 卡牌正面 (公仔相片) */
     .card-front {
       background: #ffffff;
-      transform: rotateY(180deg);
       border: 2.5px solid #e2e8f0;
-      z-index: 1;
-      padding: 0;
+      transform: rotateY(180deg) translateZ(1px);
+      -webkit-transform: rotateY(180deg) translateZ(1px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .card-container.is-matched .card-front {
@@ -79,38 +90,25 @@
       border-width: 3px;
     }
 
-    /* 圖片容器與最佳裁剪比例 */
-    .card-img-wrapper {
+    /* 裁切圖片樣式：完美放大 1.18 倍，無留白且不切邊 */
+    .card-img {
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 0.95rem;
-      background-color: #ffffff;
-      padding: 2px;
-    }
-
-    .card-img-cropped {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      /* 微調放大至 1.15 倍：精確切除多餘留白邊，同時完整保留頂部氣泡、文字與底部字樣 */
-      transform: scale(1.15);
+      object-fit: cover;
+      transform: scale(1.18);
       transform-origin: center center;
+      display: block;
       pointer-events: none;
-      user-select: none;
     }
 
-    /* 配對成功彈跳動畫 */
+    /* 配對成功輕微彈跳 */
     @keyframes matchPop {
       0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
+      50% { transform: scale(1.06); }
       100% { transform: scale(1); }
     }
     .card-container.is-matched {
-      animation: matchPop 0.35s ease-out;
+      animation: matchPop 0.3s ease-out;
     }
 
     /* 慶祝彩色碎紙屑 */
@@ -164,7 +162,7 @@
   <!-- 遊戲主卡牌網格 (4x4 完美方形陣列共 16 張) -->
   <main class="w-full max-w-[340px] sm:max-w-[380px] flex-1 flex flex-col items-center justify-center my-3">
     <div id="cardGrid" class="grid grid-cols-4 gap-2.5 sm:gap-3 w-full aspect-square">
-      <!-- 由 JavaScript 動態生成 16 張卡片 -->
+      <!-- 由 JavaScript 動態生成 16 張乾淨卡片 -->
     </div>
   </main>
 
@@ -230,11 +228,11 @@
        1. 卡牌圖片資料庫 (01.jpeg 至 05.jpeg)
        ========================================================================== */
     const CARD_DATA = [
-      { id: '01', name: '小人仔 1', imgUrl: 'https://tcshun.github.io/MatchingKorean/01.jpeg' },
-      { id: '02', name: '小人仔 2', imgUrl: 'https://tcshun.github.io/MatchingKorean/02.jpeg' },
-      { id: '03', name: '小人仔 3', imgUrl: 'https://tcshun.github.io/MatchingKorean/03.jpeg' },
-      { id: '04', name: '小人仔 4', imgUrl: 'https://tcshun.github.io/MatchingKorean/04.jpeg' },
-      { id: '05', name: '小人仔 5', imgUrl: 'https://tcshun.github.io/MatchingKorean/05.jpeg' }
+      { id: '01', imgUrl: 'https://tcshun.github.io/MatchingKorean/01.jpeg' },
+      { id: '02', imgUrl: 'https://tcshun.github.io/MatchingKorean/02.jpeg' },
+      { id: '03', imgUrl: 'https://tcshun.github.io/MatchingKorean/03.jpeg' },
+      { id: '04', imgUrl: 'https://tcshun.github.io/MatchingKorean/04.jpeg' },
+      { id: '05', imgUrl: 'https://tcshun.github.io/MatchingKorean/05.jpeg' }
     ];
 
     /* ==========================================================================
@@ -276,7 +274,7 @@
         this.init();
         if (!this.ctx) return;
         const now = this.ctx.currentTime;
-        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
@@ -318,7 +316,7 @@
     }
 
     /* ==========================================================================
-       3. 遊戲邏輯與互動 (4x4 網格 / 8組配對)
+       3. 遊戲邏輯 (4x4 / 8組配對)
        ========================================================================== */
     const sound = new SoundEngine();
     let cards = [];
@@ -386,7 +384,7 @@
       timerInterval = null;
     }
 
-    // 初始化/重設遊戲 (構建 8 組配對 = 16 張卡)
+    // 初始化/重設遊戲
     function initGame() {
       stopTimer();
       secondsElapsed = 0;
@@ -400,7 +398,7 @@
       winModal.classList.add('hidden');
       winModal.classList.remove('opacity-100');
 
-      // 挑選 8 組配對：5 款各一組 + 前 3 款再各多一組
+      // 8 組配對 (共 16 張牌)
       const selectedPairs = [
         CARD_DATA[0],
         CARD_DATA[1],
@@ -412,7 +410,6 @@
         CARD_DATA[2]
       ];
 
-      // 每組產生 2 張，共 16 張卡片
       const deck = [];
       selectedPairs.forEach((item, index) => {
         deck.push({ uniqueKey: `${index}-A`, cardId: item.id, cardData: item });
@@ -423,7 +420,7 @@
       renderBoard();
     }
 
-    // 繪製 4x4 棋盤
+    // 繪製卡牌
     function renderBoard() {
       cardGrid.innerHTML = '';
 
@@ -432,22 +429,14 @@
         cardEl.className = 'card-container aspect-square cursor-pointer';
         cardEl.dataset.index = index;
 
+        // 生成乾淨、無多餘雜訊的 HTML 結構
         cardEl.innerHTML = `
           <div class="card-inner">
-            <!-- 背面 (藍底白字 ?) -->
             <div class="card-back">
-              <span class="text-2xl sm:text-3xl font-black text-white drop-shadow-sm select-none">?</span>
+              <span class="text-2xl sm:text-3xl font-black text-white select-none">?</span>
             </div>
-            <!-- 正面 (平衡裁剪與完整顯示) -->
             <div class="card-front">
-              <div class="card-img-wrapper">
-                <img 
-                  src="${card.cardData.imgUrl}" 
-                  alt=""
-                  class="card-img-cropped"
-                  loading="eager"
-                />
-              </div>
+              <img src="${card.cardData.imgUrl}" alt="Card" class="card-img" />
             </div>
           </div>
         `;
@@ -457,17 +446,15 @@
       });
     }
 
-    // 點擊處理
+    // 卡牌點擊
     function handleCardClick(cardEl, card) {
       if (isLocked) return;
       if (cardEl.classList.contains('is-flipped') || cardEl.classList.contains('is-matched')) return;
 
-      // 首次翻牌開始計時
       if (moves === 0 && flippedCards.length === 0 && !timerInterval) {
         startTimer();
       }
 
-      // 翻轉卡片
       sound.playFlip();
       triggerHaptic(20);
       cardEl.classList.add('is-flipped');
@@ -480,13 +467,12 @@
       }
     }
 
-    // 檢查配對
+    // 配對檢查
     function checkMatch() {
       const [card1, card2] = flippedCards;
       const isMatch = card1.data.cardId === card2.data.cardId;
 
       if (isMatch) {
-        // 配對成功
         setTimeout(() => {
           sound.playMatch();
           triggerHaptic(50);
@@ -495,13 +481,11 @@
           matchedCount++;
           flippedCards = [];
 
-          // 完成 8 組配對即獲勝
           if (matchedCount === 8) {
             handleGameWin();
           }
         }, 280);
       } else {
-        // 配對失敗，翻轉回去
         isLocked = true;
         setTimeout(() => {
           card1.element.classList.remove('is-flipped');
@@ -512,7 +496,7 @@
       }
     }
 
-    // 通關慶祝
+    // 獲勝結算
     function handleGameWin() {
       stopTimer();
       sound.playVictory();
@@ -533,7 +517,7 @@
       }, 450);
     }
 
-    // 生成碎紙屑動畫
+    // 慶祝紙屑
     function createConfetti() {
       const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
       for (let i = 0; i < 35; i++) {
@@ -549,7 +533,7 @@
       }
     }
 
-    // 重新開始與按鈕綁定
+    // 按鈕監聽
     restartBtn.addEventListener('click', () => {
       triggerHaptic(20);
       initGame();
