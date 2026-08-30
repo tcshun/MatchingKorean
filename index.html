@@ -65,31 +65,34 @@
       background: linear-gradient(145deg, #6885f7, #5373ea);
       color: white;
       cursor: pointer;
+      transform: translateZ(1px);
+      -webkit-transform: translateZ(1px);
     }
     
-    /* 卡牌正面 (裁剪留白後滿版顯示) */
+    /* 卡牌正面 (修正 3D 渲染圖層問題) */
     .card-front {
       background: #ffffff;
-      transform: rotateY(180deg);
+      transform: rotateY(180deg) translateZ(1px);
+      -webkit-transform: rotateY(180deg) translateZ(1px);
       border: 2px solid #e2e8f0;
       overflow: hidden;
       position: relative;
+      padding: 6px;
     }
 
-    /* 放大圖片以裁剪邊緣多餘的白色區塊 */
+    /* 圖片完整居中顯示，避免 3D scale 導致移動端顯示成純白 */
     .card-img-cropped {
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      transform: scale(1.38); /* 放大 1.38 倍將多餘留白裁切掉，突出人物主體 */
+      object-fit: contain;
       pointer-events: none;
     }
 
-    /* 配對成功彈跳動畫 */
+    /* 配對成功彈跳動畫 (移除重複旋轉，防止圖片左右倒轉) */
     @keyframes popMatch {
-      0% { transform: scale(1) rotateY(180deg); }
-      50% { transform: scale(1.08) rotateY(180deg); }
-      100% { transform: scale(0.96) rotateY(180deg); }
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(0.96); }
     }
     .pop-match {
       animation: popMatch 0.4s ease forwards;
@@ -424,12 +427,13 @@
     function renderBoard() {
       cardGrid.innerHTML = '';
 
+      // 載入失敗時的備用插圖
+      const fallbackSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="%23fef3c7"/><text x="50" y="60" font-size="40" text-anchor="middle">👧</text></svg>`;
+
       cards.forEach((card, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = 'card-container aspect-square cursor-pointer';
         cardEl.dataset.index = index;
-
-        const fallbackAttr = card.cardData.fallback ? `onerror="this.onerror=null;this.src='${card.cardData.fallback}'"` : '';
 
         cardEl.innerHTML = `
           <div class="card-inner">
@@ -437,14 +441,14 @@
             <div class="card-back">
               <span class="text-2xl sm:text-3xl font-black text-white drop-shadow-sm select-none">?</span>
             </div>
-            <!-- 正面 (相片裁剪多餘留白) -->
+            <!-- 正面 (公仔圖片) -->
             <div class="card-front">
               <img 
                 src="${card.cardData.imgUrl}" 
                 alt=""
                 class="card-img-cropped"
-                loading="lazy"
-                ${fallbackAttr}
+                loading="eager"
+                onerror="this.onerror=null; this.src='${fallbackSvg}';"
               />
             </div>
           </div>
