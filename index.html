@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>配對韓風小人仔 😙</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'M PLUS Rounded 1c', 'Noto Sans TC', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #f7f9fd;
+      background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    /* 3D 卡牌翻轉效果 */
+    .card-container {
+      perspective: 1000px;
+    }
+    
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-style: preserve-3d;
+      border-radius: 1.25rem;
+    }
+    
+    .card-container.is-flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+    
+    .card-container.is-matched .card-inner {
+      transform: rotateY(180deg) scale(0.96);
+      box-shadow: 0 0 0 3.5px #10b981;
+    }
+
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px -2px rgba(92, 124, 250, 0.18), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+    
+    /* 卡牌背面 (藍色問號) */
+    .card-back {
+      background: linear-gradient(145deg, #6885f7, #5373ea);
+      color: white;
+      cursor: pointer;
+    }
+    
+    /* 卡牌正面 (裁剪留白後滿版顯示) */
+    .card-front {
+      background: #ffffff;
+      transform: rotateY(180deg);
+      border: 2px solid #e2e8f0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 放大圖片以裁剪邊緣多餘的白色區塊 */
+    .card-img-cropped {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.38); /* 放大 1.38 倍將多餘留白裁切掉，突出人物主體 */
+      pointer-events: none;
+    }
+
+    /* 配對成功彈跳動畫 */
+    @keyframes popMatch {
+      0% { transform: scale(1) rotateY(180deg); }
+      50% { transform: scale(1.08) rotateY(180deg); }
+      100% { transform: scale(0.96) rotateY(180deg); }
+    }
+    .pop-match {
+      animation: popMatch 0.4s ease forwards;
+    }
+
+    /* 慶祝彩色碎紙屑 */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      opacity: 0;
+      animation: fall 2.5s ease-out forwards;
+    }
+    @keyframes fall {
+      0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(80vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-between text-slate-800 p-3 sm:p-5 select-none">
+
+  <!-- 頂部資訊欄 -->
+  <header class="w-full max-w-sm flex flex-col items-center mt-2 relative">
+    
+    <!-- 遊戲標題 -->
+    <div class="text-center mb-1">
+      <h1 class="text-2xl font-black tracking-wide text-slate-800 flex items-center justify-center gap-1.5">
+        配對韓風小人仔 <span class="text-2xl">😙</span>
+      </h1>
+    </div>
+
+    <!-- 狀態資訊列：步數與時間 -->
+    <div class="w-full flex items-center justify-between mt-3 px-2">
+      <div class="text-slate-600 font-extrabold text-base flex items-center gap-1">
+        <span>Moves:</span>
+        <span id="moveCount" class="text-slate-900 text-lg">0</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- 音效開關 -->
+        <button id="soundToggle" class="text-slate-500 hover:text-slate-800 p-1 rounded-full text-sm" title="切換音效">
+          <span id="soundIcon">🔊</span>
+        </button>
+        <!-- 時間 -->
+        <div class="text-slate-500 font-bold text-sm bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-inner">
+          ⏱️ <span id="timerText">00:00</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 遊戲主卡牌網格 (10張卡片佈局：4 + 4 + 2) -->
+  <main class="w-full max-w-sm flex-1 flex flex-col items-center justify-center my-3">
+    <div id="cardGrid" class="grid grid-cols-4 gap-2.5 sm:gap-3.5 w-full aspect-[4/3.6]">
+      <!-- 卡片由 JavaScript 動態生成 (共 10 張) -->
+    </div>
+  </main>
+
+  <!-- 底部操作區 (包含 Restart 按鈕與提示) -->
+  <footer class="w-full max-w-sm flex flex-col items-center gap-3 pb-3">
+    <!-- 下移至下方的重新開始按鈕 -->
+    <button id="restartBtn" class="flex items-center justify-center gap-2 w-full max-w-[200px] py-2.5 px-5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-2xl border-2 border-slate-200 shadow-md active:scale-95 transition-all">
+      <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      <span>Restart</span>
+    </button>
+    <p class="text-xs text-slate-400 font-medium">翻開相同的小女孩卡片完成配對 🌸</p>
+  </footer>
+
+  <!-- 通關勝利彈窗 Modal -->
+  <div id="winModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl transform scale-90 transition-transform duration-300 border-4 border-amber-200 relative overflow-hidden">
+      <!-- 頂部裝飾小插圖 -->
+      <div class="w-16 h-16 mx-auto -mt-2 mb-2">
+        <svg viewBox="0 0 100 100" class="w-full h-full animate-bounce">
+          <circle cx="50" cy="50" r="45" fill="#fef08a"/>
+          <circle cx="35" cy="45" r="5" fill="#713f12"/>
+          <circle cx="65" cy="45" r="5" fill="#713f12"/>
+          <ellipse cx="25" cy="55" rx="6" ry="3" fill="#f87171" opacity="0.6"/>
+          <ellipse cx="75" cy="55" rx="6" ry="3" fill="#f87171" opacity="0.6"/>
+          <path d="M 35 60 Q 50 78 65 60" fill="none" stroke="#713f12" stroke-width="4" stroke-linecap="round"/>
+          <text x="50" y="25" font-size="16" text-anchor="middle">👑</text>
+        </svg>
+      </div>
+
+      <h2 class="text-2xl font-black text-slate-800 mb-1">太厲害了！🎉</h2>
+      <p class="text-xs font-bold text-amber-600 mb-4 tracking-wide">所有小女孩都找到同伴了！</p>
+
+      <!-- 統計數據 -->
+      <div class="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex justify-around mb-5">
+        <div>
+          <div class="text-[11px] text-slate-400 font-bold uppercase">總步數</div>
+          <div id="finalMoves" class="text-xl font-black text-[#5373ea]">0</div>
+        </div>
+        <div class="w-[1px] bg-slate-200"></div>
+        <div>
+          <div class="text-[11px] text-slate-400 font-bold uppercase">用時</div>
+          <div id="finalTime" class="text-xl font-black text-emerald-500">00:00</div>
+        </div>
+      </div>
+
+      <!-- 再玩一局按鈕 -->
+      <div>
+        <button id="modalPlayAgain" class="w-full py-3 bg-[#5373ea] hover:bg-[#4361d8] text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all text-sm">
+          再玩一局 🎮
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示通知 (Toast) -->
+  <div id="toast" class="fixed top-16 bg-slate-800/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-50 transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-2">
+    已重新開始新一局！
+  </div>
+
+  <script>
+    /* ==========================================================================
+       1. 卡牌圖片資料設定 (使用指定的 01.jpeg 至 05.jpeg 圖源)
+       ========================================================================== */
+    const CARD_DATA = [
+      {
+        id: 'img1',
+        name: '韓風小人仔 1',
+        imgUrl: 'https://tcshun.github.io/pomodoro-app/01.jpeg'
+      },
+      {
+        id: 'img2',
+        name: '韓風小人仔 2',
+        imgUrl: 'https://tcshun.github.io/pomodoro-app/02.jpeg'
+      },
+      {
+        id: 'img3',
+        name: '韓風小人仔 3',
+        imgUrl: 'https://tcshun.github.io/pomodoro-app/03.jpeg'
+      },
+      {
+        id: 'img4',
+        name: '韓風小人仔 4',
+        imgUrl: 'https://tcshun.github.io/pomodoro-app/04.jpeg'
+      },
+      {
+        id: 'img5',
+        name: '韓風小人仔 5',
+        imgUrl: 'https://tcshun.github.io/pomodoro-app/05.jpeg'
+      }
+    ];
+
+    /* ==========================================================================
+       2. Web Audio 音效引擎
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      }
+
+      playFlip() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(560, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+
+      playMatch() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + idx * 0.07 + 0.2);
+        });
+      }
+
+      playVictory() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const melody = [
+          { f: 523.25, d: 0.15 }, { f: 659.25, d: 0.15 }, { f: 783.99, d: 0.15 },
+          { f: 1046.50, d: 0.3 }, { f: 880, d: 0.2 }, { f: 1046.50, d: 0.5 }
+        ];
+        let t = now;
+        melody.forEach(note => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(note.f, t);
+          gain.gain.setValueAtTime(0.3, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + note.d);
+          t += note.d * 0.85;
+        });
+      }
+    }
+
+    /* ==========================================================================
+       3. 遊戲邏輯與交互
+       ========================================================================== */
+    const sound = new SoundEngine();
+    let cards = [];
+    let flippedCards = [];
+    let matchedCount = 0;
+    let moves = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isLocked = false;
+
+    // DOM 元素
+    const cardGrid = document.getElementById('cardGrid');
+    const moveCountEl = document.getElementById('moveCount');
+    const timerTextEl = document.getElementById('timerText');
+    const restartBtn = document.getElementById('restartBtn');
+    const soundToggle = document.getElementById('soundToggle');
+    const soundIcon = document.getElementById('soundIcon');
+    const winModal = document.getElementById('winModal');
+    const finalMoves = document.getElementById('finalMoves');
+    const finalTime = document.getElementById('finalTime');
+    const modalPlayAgain = document.getElementById('modalPlayAgain');
+    const toast = document.getElementById('toast');
+
+    // 觸覺振動
+    function triggerHaptic(ms = 30) {
+      if (navigator.vibrate) {
+        try { navigator.vibrate(ms); } catch (e) {}
+      }
+    }
+
+    // 顯示提示訊息
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', '-translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', '-translate-y-2');
+      }, 1800);
+    }
+
+    // 洗牌函數 (Fisher-Yates)
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // 時間格式化
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    // 啟動計時器
+    function startTimer() {
+      if (timerInterval) return;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        timerTextEl.textContent = formatTime(secondsElapsed);
+      }, 1000);
+    }
+
+    // 停止計時器
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    // 初始化/重設遊戲
+    function initGame() {
+      stopTimer();
+      secondsElapsed = 0;
+      moves = 0;
+      matchedCount = 0;
+      flippedCards = [];
+      isLocked = false;
+      
+      moveCountEl.textContent = '0';
+      timerTextEl.textContent = '00:00';
+      winModal.classList.add('hidden');
+      winModal.classList.remove('opacity-100');
+
+      // 準備 10 張卡片（5 組配對）
+      const deck = [...CARD_DATA, ...CARD_DATA].map((item, index) => ({
+        uniqueId: index,
+        cardId: item.id,
+        cardData: item
+      }));
+
+      cards = shuffle(deck);
+      renderBoard();
+    }
+
+    // 繪製棋盤 (10 張卡片)
+    function renderBoard() {
+      cardGrid.innerHTML = '';
+
+      cards.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card-container aspect-square cursor-pointer';
+        cardEl.dataset.index = index;
+
+        // 特殊排版：前 8 張佔 2 行 (每行 4 張)，最後 2 張排在第 3 行
+        if (index === 8) {
+          cardEl.classList.add('col-start-1', 'sm:col-start-1');
+        }
+
+        cardEl.innerHTML = `
+          <div class="card-inner">
+            <!-- 背面 (藍色 + ?) -->
+            <div class="card-back">
+              <span class="text-3xl sm:text-4xl font-black text-white drop-shadow-sm select-none">?</span>
+            </div>
+            <!-- 正面 (相片裁剪多餘留白) -->
+            <div class="card-front">
+              <img 
+                src="${card.cardData.imgUrl}" 
+                alt=""
+                class="card-img-cropped"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        `;
+
+        // 綁定點擊與觸控
+        cardEl.addEventListener('click', () => handleCardClick(cardEl, card));
+        cardGrid.appendChild(cardEl);
+      });
+    }
+
+    // 卡片點擊處理
+    function handleCardClick(cardEl, card) {
+      if (isLocked) return;
+      if (cardEl.classList.contains('is-flipped') || cardEl.classList.contains('is-matched')) return;
+
+      // 首次翻牌啟動計時
+      if (moves === 0 && flippedCards.length === 0 && !timerInterval) {
+        startTimer();
+      }
+
+      // 翻轉卡片
+      sound.playFlip();
+      triggerHaptic(20);
+      cardEl.classList.add('is-flipped');
+      flippedCards.push({ element: cardEl, data: card });
+
+      if (flippedCards.length === 2) {
+        moves++;
+        moveCountEl.textContent = moves;
+        checkMatch();
+      }
+    }
+
+    // 檢查兩張卡片是否配對
+    function checkMatch() {
+      const [card1, card2] = flippedCards;
+      const isMatch = card1.data.cardId === card2.data.cardId;
+
+      if (isMatch) {
+        // 配對成功
+        setTimeout(() => {
+          sound.playMatch();
+          triggerHaptic(50);
+          card1.element.classList.add('is-matched', 'pop-match');
+          card2.element.classList.add('is-matched', 'pop-match');
+          matchedCount++;
+          flippedCards = [];
+
+          // 判斷是否全部配對完成 (5 對 = 10 張)
+          if (matchedCount === CARD_DATA.length) {
+            handleGameWin();
+          }
+        }, 300);
+      } else {
+        // 配對失敗，翻轉回去
+        isLocked = true;
+        setTimeout(() => {
+          card1.element.classList.remove('is-flipped');
+          card2.element.classList.remove('is-flipped');
+          flippedCards = [];
+          isLocked = false;
+        }, 800);
+      }
+    }
+
+    // 通關慶祝
+    function handleGameWin() {
+      stopTimer();
+      sound.playVictory();
+      triggerHaptic(100);
+
+      finalMoves.textContent = moves;
+      finalTime.textContent = formatTime(secondsElapsed);
+
+      // 噴灑碎紙屑特效
+      createConfetti();
+
+      // 彈窗淡入
+      setTimeout(() => {
+        winModal.classList.remove('hidden');
+        setTimeout(() => {
+          winModal.classList.add('opacity-100');
+          winModal.querySelector('div').classList.remove('scale-90');
+          winModal.querySelector('div').classList.add('scale-100');
+        }, 50);
+      }, 500);
+    }
+
+    // 生成碎紙屑動畫
+    function createConfetti() {
+      const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+      for (let i = 0; i < 40; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = `${Math.random() * 100}vw`;
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+        confetti.style.transform = `scale(${Math.random() * 0.8 + 0.6})`;
+        document.body.appendChild(confetti);
+
+        setTimeout(() => confetti.remove(), 2800);
+      }
+    }
+
+    // 事件監聽綁定
+    restartBtn.addEventListener('click', () => {
+      triggerHaptic(20);
+      initGame();
+      showToast('已重新開始新一局！🔄');
+    });
+
+    modalPlayAgain.addEventListener('click', () => {
+      triggerHaptic(20);
+      initGame();
+    });
+
+    // 音效開關切換
+    soundToggle.addEventListener('click', () => {
+      sound.muted = !sound.muted;
+      soundIcon.textContent = sound.muted ? '🔇' : '🔊';
+      showToast(sound.muted ? '音效已關閉' : '音效已開啟');
+    });
+
+    // 啟動遊戲
+    window.addEventListener('DOMContentLoaded', initGame);
+  </script>
+</body>
+</html>
